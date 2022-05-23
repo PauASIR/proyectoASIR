@@ -1,0 +1,13 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pvc-nginx
+  namespace: nginx
+spec:
+  storageClassName: openebs-local
+  volumeName: pvc-nginx
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5G

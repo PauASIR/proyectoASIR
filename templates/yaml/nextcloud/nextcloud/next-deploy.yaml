@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextcloud 
+  namespace: nextsync
+  labels:
+    app: nextcloud 
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nextcloud 
+  template:
+    metadata:
+      labels:
+        app: nextcloud
+    spec:
+      volumes:
+      - name: nextcloud-storage
+        persistentVolumeClaim: 
+          claimName: nextcloud-pvc
+      - name: nextsync
+        persistentVolumeClaim: 
+          claimName: syncthing-pvc
+      containers:
+        - image: nextcloud:apache
+          name: nextsync
+          ports:
+            - containerPort: 80
+          env:
+            - name: REDIS_HOST
+              value: redis
+            - name: MYSQL_HOST
+              value: mariadb 
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  key: MYSQL_DATABASE
+                  name: mariadb-secret
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: MYSQL_PASSWORD
+                  name: mariadb-secret
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  key: MYSQL_USER
+                  name: mariadb-secret
+            - name: NEXTCLOUD_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: MYSQL_PASSWORD
+                  name: mariadb-secret
+            - name: NEXTCLOUD_ADMIN_USER
+              value: "cuak"
+            - name: NEXTCLOUD_TRUSTED_DOMAINS 
+              value: next.cuak.es
+          volumeMounts:
+            - mountPath: /var/www/html
+              name: nextcloud-storage
+            - mountPath: /mnt/sync
+              name: nextsync

@@ -1,0 +1,23 @@
+- hosts: server
+  become: false
+
+  tasks:
+
+
+    - name: Create colabora deployment
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/nextcloud/collabora/col-deploy.yaml'
+
+    - name: Create colabora service
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/nextcloud/collabora/col-service.yaml'
+
+    - name: Create colabora ingress
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/nextcloud/collabora/col-ingress.yaml'

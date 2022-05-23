@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: collabora
+  namespace: collabora
+  labels:
+    app: collabora
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: collabora
+  template:
+    metadata:
+      labels:
+        app: collabora
+    spec:
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      containers:
+        - image: collabora/code:latest
+          name: collabora
+          ports:
+            - containerPort: 9980
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp

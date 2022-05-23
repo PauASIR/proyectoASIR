@@ -1,0 +1,105 @@
+- hosts: server
+  become: yes
+  become_user: k8s
+
+  vars_files:
+    - ./vars/vars.yaml
+
+  tasks:
+
+    - name: Create nextcloud and syncthing namespace
+      kubernetes.core.k8s:
+        name: nextsync
+        api_version: v1
+        kind: Namespace
+        state: present
+
+    - name: Create mariadb pvc
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/nextcloud/mariadb/mariadb-pvc.yaml'
+
+    - name: Create mariadb secret
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/nextcloud/mariadb/mariadb-secret.yaml'
+
+    - name: Create mariadb stateful
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/nextcloud/mariadb/mariadb-stateful.yaml'
+
+    - name: Create mariadb service
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/nextcloud/mariadb/mariadb-service.yaml'
+
+    - name: Create redis deployment
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/nextcloud/redis/redis-deploy.yaml'
+
+    - name: Create redis service
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/nextcloud/redis/redis-service.yaml'
+
+    - name: Create syncthing pvc
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/syncthing/sync-pvc.yaml'
+
+    - name: Create syncthing deployment
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/syncthing/sync-deploy.yaml'
+
+    - name: Create syncthing transfer service
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/syncthing/sync-service-dl.yaml'
+
+    - name: Create syncthing web service
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/syncthing/sync-service-http.yaml'
+
+    - name: Create syncthing ingress
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/syncthing/sync-ingress.yaml'
+
+    - name: Create nextcloud pvc
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/nextcloud/nextcloud/next-pvc.yaml'
+
+    - name: Create nextcloud deployment
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/nextcloud/nextcloud/next-deploy.yaml'
+
+    - name: Create nextcloud service
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/nextcloud/nextcloud/next-service.yaml'
+
+    - name: Create nextcloud ingress
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/nextcloud/nextcloud/next-ingress.yaml'

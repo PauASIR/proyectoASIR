@@ -1,0 +1,35 @@
+- hosts: server
+  become: yes
+
+  vars_files:
+    - ./vars/vars.yaml
+
+  tasks:
+  
+    - name: Init Kubeadm
+      shell: 
+        cmd: |
+            kubeadm init --pod-network-cidr=192.168.0.0/16
+
+    - name: Setting k8s user
+      shell: 
+        cmd: |
+          mkdir -p /home/{{ k8s_user }}/.kube
+          yes | cp -i /etc/kubernetes/admin.conf /home/{{ k8s_user }}/.kube/config
+          chown {{ k8s_user }}:{{ k8s_user }} /home/{{ k8s_user }}/.kube/config
+
+    - name: Install calico CNI
+      shell: 
+        cmd: |
+          kubectl create -f https://projectcalico.docs.tigera.io/manifests/tigera-operator.yaml
+          kubectl create -f https://projectcalico.docs.tigera.io/manifests/custom-resources.yaml
+          kubectl taint nodes --all node-role.kubernetes.io/master-
+
+    - name: Install calicoctl
+      shell: 
+        cmd: |
+          curl -L https://github.com/projectcalico/calico/releases/download/v3.22.1/calicoctl-linux-amd64 -o calicoctl
+          chmod +x ./calicoctl
+          mv calicoctl /usr/local/bin
+          export DATASTORE_TYPE=kubernetes
+          export KUBECONFIG=/home/{{ k8s_user }}/.kube/config

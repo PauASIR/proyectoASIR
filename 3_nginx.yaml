@@ -1,0 +1,39 @@
+- hosts: server
+  become: yes
+  become_user: k8s
+
+  vars_files:
+    - ./vars/vars.yaml
+
+  tasks:
+
+    - name: Create nginx namespace
+      kubernetes.core.k8s:
+        name: nginx
+        api_version: v1
+        kind: Namespace
+        state: present
+
+    - name: Create nginx pvc
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/nginx/nginx-pvc.yaml'
+
+    - name: Create nginx deployment
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/nginx/nginx-deploy.yaml'
+
+    - name: Create nginx service
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/nginx/nginx-service.yaml'
+
+    - name: Create nginx ingress
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/nginx/nginx-ingress.yaml'

@@ -1,0 +1,183 @@
+- hosts: server
+  become: yes
+
+  vars_files:
+    - ./vars/vars.yaml
+
+  tasks:
+
+    - name: Update apt packages 
+      apt:
+        upgrade: yes
+        update_cache: yes
+        cache_valid_time: 86400 #One day
+        
+    - name: Disable swap
+      shell: 
+        cmd: |
+          swapoff -a && sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+
+    # - name: Allow port range 60000-61000
+    #   community.general.ufw:
+    #     rule: allow
+    #     port: 6443, 2379, 2380, 10250, 10257, 10259
+    #     proto: tcp
+
+    - name: Install packages
+      apt: 
+        name:
+        - ca-certificates
+        - curl
+        - jq
+        - tar
+        - gnupg
+        - gnupg2
+        - lsb-release
+        - apt-transport-https
+        - software-properties-common
+
+    # - name: Crio install
+    #   shell: 
+    #     cmd: |
+    #           export OS_VERSION=xUbuntu_20.04
+    #           export CRIO_VERSION=1.23
+    #           curl -fsSL https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/$OS_VERSION/Release.key | sudo gpg --dearmor -o /usr/share/keyrings/libcontainers-archive-keyring.gpg
+    #           curl -fsSL https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/$CRIO_VERSION/$OS_VERSION/Release.key | sudo gpg --dearmor -o /usr/share/keyrings/libcontainers-crio-archive-keyring.gpg
+    #           echo "deb [signed-by=/usr/share/keyrings/libcontainers-archive-keyring.gpg] https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/$OS_VERSION/ /" | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
+    #           echo "deb [signed-by=/usr/share/keyrings/libcontainers-crio-archive-keyring.gpg] https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/$CRIO_VERSION/$OS_VERSION/ /" | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:stable:cri-o:$CRIO_VERSION.list
+
+
+    # - name: Install cri-o
+    #   apt: 
+    #     name:
+    #     - cri-o
+    #     - cri-o-runc
+
+    # - name: Crio install
+    #   shell: 
+    #     cmd: |
+    #       sudo rm -rf /etc/cni/net.d/*
+    #       systemctl daemon-reload
+    #       systemctl enable crio
+    #       systemctl start crio
+
+    # - name: Download containerd
+    #   get_url:
+    #     url: https://github.com/containerd/containerd/releases/download/v1.6.4/containerd-1.6.4-linux-amd64.tar.gz
+    #     dest: /tmp/containerd.tar.gz
+
+    # - name: Extract containerd
+    #   ansible.builtin.unarchive:
+    #     src: /tmp/containerd.tar.gz
+    #     dest: /usr/local
+
+    # - name: GPG key / APT repository from docker
+    #   shell: 
+    #     cmd: |
+    #       curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+    #       echo \
+    #       "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+    #       $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    #       apt update
+
+    # - name: Install docker
+    #   apt: 
+    #     name:
+    #       - docker-ce
+    #       - docker-ce-cli
+    #       - containerd.io
+    #       - docker-compose-plugin
+
+    # - name: cri-docker
+    #   shell: 
+    #     cmd: |
+    #       mkdir -p /usr/local/bin
+    #       install -o root -g root -m 0755 bin/cri-dockerd /usr/local/bin/cri-dockerd
+    #       cp -a packaging/systemd/* /etc/systemd/system
+    #       sed -i -e 's,/usr/bin/cri-dockerd,/usr/local/bin/cri-dockerd,' /etc/systemd/system/cri-docker.service
+    #       systemctl daemon-reload
+    #       systemctl enable cri-docker.service
+    #       systemctl enable --now cri-docker.socket
+
+    # - name: Cgroup driver
+    #   shell: 
+    #     cmd: |
+    #       cat <<EOF | sudo tee /etc/docker/daemon.json
+    #       {
+    #         "exec-opts": ["native.cgroupdriver=systemd"],
+    #         "log-driver": "json-file",
+    #         "log-opts": {
+    #           "max-size": "100m"
+    #         },
+    #         "storage-driver": "overlay2"
+    #       }
+    #       EOF
+    #       systemctl daemon-reload
+    #       systemctl restart docker
+
+    - name: Install cri-o
+      ansible.builtin.script: 
+        cmd: './templates/sh/crio.sh'
+
+    - name: GPG key / APT repository from kubernetes
+      shell: 
+        cmd: |
+          curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg    
+          echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+          apt update
+
+    - name: Install kubernetes
+      apt: 
+        name:
+        - kubelet
+        - kubeadm
+        - kubectl
+
+    - name: Mark hold k8s
+      shell: 
+        cmd: |
+          apt-mark hold kubelet kubeadm kubectl
+
+    - name: Init Kubeadm
+      shell: 
+        cmd: |
+            kubeadm init --pod-network-cidr=192.168.0.0/16
+
+    - name: Add k8s group
+      ansible.builtin.group:
+        name: '{{ k8s_user }}'
+        state: present
+
+    - name: Add the k8s user
+      ansible.builtin.user:
+        name: '{{ k8s_user }}'
+        shell: /bin/bash
+        groups: '{{ k8s_user }}'
+        append: yes
+
+    - name: Setting k8s user
+      shell: 
+        cmd: |
+          mkdir -p /home/{{ k8s_user }}/.kube
+          yes | cp -i /etc/kubernetes/admin.conf /home/{{ k8s_user }}/.kube/config
+          chown {{ k8s_user }}:{{ k8s_user }} /home/{{ k8s_user }}/.kube/config
+
+    - name: Install acl
+      apt: 
+        name:
+          - acl
+
+    - name: Set acl rx to k8s user in tmp folder
+      shell: 
+        cmd: |
+          setfacl -m u:k8s:rx /tmp/
+
+    - name: Install pip3
+      apt: 
+        name:
+          - python3-pip
+
+    - name: Install kubernetes pip3
+      shell: 
+        cmd: |
+          pip3 install kubernetes

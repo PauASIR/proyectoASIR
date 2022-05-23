@@ -1,0 +1,6 @@
+[server]
+79.116.38.235
+
+[server:vars]
+ansible_user=pau
+ansible_ssh_port=4422

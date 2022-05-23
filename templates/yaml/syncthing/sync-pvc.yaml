@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: syncthing-pvc
+  namespace: nextsync
+spec:
+  storageClassName: openebs-local
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3G

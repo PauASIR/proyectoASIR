@@ -1,0 +1,23 @@
+- hosts: server
+  become: yes
+
+  vars_files:
+    - ./vars/vars.yaml
+
+  tasks:
+  
+    - name: Install calico CNI
+      shell: 
+        cmd: |
+          runuser -l {{ k8s_user }} -c 'kubectl create -f https://projectcalico.docs.tigera.io/manifests/tigera-operator.yaml'
+          runuser -l {{ k8s_user }} -c 'kubectl create -f https://projectcalico.docs.tigera.io/manifests/custom-resources.yaml'
+          runuser -l {{ k8s_user }} -c 'kubectl taint nodes --all node-role.kubernetes.io/master-'
+
+    - name: Install calicoctl
+      shell: 
+        cmd: |
+          curl -L https://github.com/projectcalico/calico/releases/download/v3.22.1/calicoctl-linux-amd64 -o calicoctl
+          chmod +x ./calicoctl
+          mv calicoctl /usr/local/bin
+          export DATASTORE_TYPE=kubernetes
+          export KUBECONFIG=/home/{{ k8s_user }}/.kube/config

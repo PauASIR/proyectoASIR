@@ -1,0 +1,6 @@
+[vm]
+192.168.1.10
+
+[vm:vars]
+ansible_user=pau
+ansible_port=7777

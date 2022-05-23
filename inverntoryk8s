@@ -1,0 +1,5 @@
+[server]
+86.127.248.156
+
+[server:vars]
+ansible_user=k8s

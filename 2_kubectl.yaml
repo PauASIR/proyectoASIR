@@ -1,0 +1,184 @@
+- hosts: server
+  become: yes
+  become_user: k8s
+
+  vars_files:
+    - ./vars/vars.yaml
+
+  tasks:
+
+    - name: Taint master or control-plane node
+      shell: 
+        cmd: |
+          kubectl taint nodes --all node-role.kubernetes.io/master- &> /dev/null
+          kubectl taint nodes --all node-role.kubernetes.io/control-plane- &> /dev/null
+          
+    - name: Download calico operator yaml
+      ansible.builtin.get_url:
+        url: https://projectcalico.docs.tigera.io/manifests/tigera-operator.yaml
+        dest: ~/tigera-operator.yaml
+        mode: '0664'
+
+    - name: Apply calico operator
+      kubernetes.core.k8s:
+        state: present
+        src: ~/tigera-operator.yaml
+
+    - name: Download calico resources yaml
+      ansible.builtin.get_url:
+        url: https://projectcalico.docs.tigera.io/manifests/custom-resources.yaml
+        dest: ~/custom-resources.yaml
+        mode: '0664'
+
+    - name: Apply calico resources
+      kubernetes.core.k8s:
+        state: present
+        src: ~/custom-resources.yaml
+
+            
+#     - name: Install calico CNI
+#       shell: 
+#         cmd: |
+#           kubectl apply -f https://projectcalico.docs.tigera.io/manifests/tigera-operator.yaml
+#           kubectl apply -f https://projectcalico.docs.tigera.io/manifests/custom-resources.yaml
+#           kubectl taint nodes --all node-role.kubernetes.io/master-
+
+- hosts: server
+  become: yes
+  become_user: pau
+
+  vars_files:
+    - ./vars/vars.yaml
+
+  tasks:
+
+    - name: Install calicoctl
+      shell: 
+        cmd: |
+          curl -L https://github.com/projectcalico/calico/releases/download/v3.22.1/calicoctl-linux-amd64 -o calicoctl
+          chmod +x ./calicoctl
+          mv calicoctl /usr/local/bin
+          export DATASTORE_TYPE=kubernetes
+          export KUBECONFIG=/home/{{ k8s_user }}/.kube/config
+
+- hosts: server
+  become: yes
+  become_user: k8s
+
+  vars_files:
+    - ./vars/vars.yaml
+
+  tasks:
+
+    - name: Create metallb namespace
+      kubernetes.core.k8s:
+        name: metallb-system
+        api_version: v1
+        kind: Namespace
+        state: present
+
+    - name: Download metallb yaml
+      ansible.builtin.get_url:
+        url: https://raw.githubusercontent.com/metallb/metallb/v0.12.1/manifests/metallb.yaml
+        dest: ~/metallb.yaml
+        mode: '0664'
+  
+    - name: Apply metallb
+      kubernetes.core.k8s:
+        state: present
+        src: ~/metallb.yaml
+
+    - name: Create secret for metallb
+      shell: 
+        cmd: |
+          kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)" &> /dev/null
+
+    # - name: Install metallb
+    #   shell: 
+    #     cmd: |
+    #       kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.12.1/manifests/namespace.yaml
+    #       kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.12.1/manifests/metallb.yaml
+    #       kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
+
+    - name: Create a metallb configmap
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/metallb/metal-configmap.yaml'
+
+    - name: Download ingress-nginx yaml for baremetal
+      ansible.builtin.get_url:
+        url: https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.1.3/deploy/static/provider/baremetal/deploy.yaml
+        dest: ~/deploy.yaml
+        mode: '0664'
+
+    - name: Apply ingress-nginx
+      kubernetes.core.k8s:
+        state: present
+        src: ~/deploy.yaml
+
+    # - name: Install ingress-nginx
+    #   shell: 
+    #     cmd: |
+    #       kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.1.3/deploy/static/provider/baremetal/deploy.yaml
+
+    - name: Modify ingress-nginx service
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/ingress-nginx/ingress-service.yaml'
+
+    - name: Download cert manager
+      ansible.builtin.get_url:
+        url: https://github.com/cert-manager/cert-manager/releases/download/v1.8.0/cert-manager.yaml
+        dest: ~/cert-manager.yaml
+        mode: '0664'
+
+    - name: Apply cert manager
+      kubernetes.core.k8s:
+        state: present
+        src: ~/cert-manager.yaml
+
+    # - name: Install certmanager
+    #   shell: 
+    #     cmd: |  
+    #       kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.8.0/cert-manager.yaml
+
+    - name: Create cluster issuer
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/cert/issuer.yaml'
+
+    - name: Download openebs operator
+      ansible.builtin.get_url:
+        url: https://openebs.github.io/charts/openebs-operator-lite.yaml
+        dest: ~/openebs-operator-lite.yaml
+        mode: '0664'
+
+    - name: Apply openebs operator
+      kubernetes.core.k8s:
+        state: present
+        src: ~/openebs-operator-lite.yaml
+
+    - name: Download openebs lite
+      ansible.builtin.get_url:
+        url: https://openebs.github.io/charts/openebs-lite-sc.yaml
+        dest: ~/openebs-lite-sc.yaml
+        mode: '0664'
+
+    - name: Apply openebs lite
+      kubernetes.core.k8s:
+        state: present
+        src: ~/openebs-lite-sc.yaml
+
+    # - name: Install openebs
+    #   shell: 
+    #     cmd: |
+    #       kubectl apply -f https://openebs.github.io/charts/openebs-operator-lite.yaml
+    #       kubectl apply -f https://openebs.github.io/charts/openebs-lite-sc.yaml
+    - name: Openeb storageclass
+      kubernetes.core.k8s:
+        state: present
+        template:
+          - path: './templates/yaml/openebs/storageclass.yaml'

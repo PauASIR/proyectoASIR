@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: syncthing
+  namespace: nextsync
+  labels:
+    app: syncthing
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: syncthing
+  template:
+    metadata:
+      labels:
+        app: syncthing
+    spec:
+      volumes:
+        - name: syncthing-data
+          persistentVolumeClaim:
+            claimName: syncthing-pvc
+      containers:
+        - image: syncthing/syncthing:latest
+          name: syncthing
+          ports: 
+            - containerPort: 8384
+              protocol: TCP
+            - containerPort: 22000
+              protocol: TCP
+            - containerPort: 21027
+              protocol: UDP
+          volumeMounts:
+            - mountPath: /var/syncthing
+              name: syncthing-data
