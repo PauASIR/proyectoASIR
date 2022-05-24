@@ -43,32 +43,32 @@
 #           kubectl apply -f https://projectcalico.docs.tigera.io/manifests/custom-resources.yaml
 #           kubectl taint nodes --all node-role.kubernetes.io/master-
 
-- hosts: server
-  become: yes
-  become_user: pau
+# - hosts: server
+#   become: yes
+#   become_user: pau
 
-  vars_files:
-    - ./vars/vars.yaml
+#   vars_files:
+#     - ./vars/vars.yaml
 
-  tasks:
+#   tasks:
 
-    - name: Install calicoctl
-      shell: 
-        cmd: |
-          curl -L https://github.com/projectcalico/calico/releases/download/v3.22.1/calicoctl-linux-amd64 -o calicoctl
-          chmod +x ./calicoctl
-          mv calicoctl /usr/local/bin
-          export DATASTORE_TYPE=kubernetes
-          export KUBECONFIG=/home/{{ k8s_user }}/.kube/config
+#     - name: Install calicoctl
+#       shell: 
+#         cmd: |
+#           curl -L https://github.com/projectcalico/calico/releases/download/v3.23.1/calicoctl-linux-amd64 -o kubectl-calico
+#           chmod +x ./calicoctl
+#           mv calicoctl /usr/local/bin
+#           export DATASTORE_TYPE=kubernetes
+#           export KUBECONFIG=/home/{{ k8s_user }}/.kube/config
 
-- hosts: server
-  become: yes
-  become_user: k8s
+# - hosts: server
+#   become: yes
+#   become_user: k8s
 
-  vars_files:
-    - ./vars/vars.yaml
+#   vars_files:
+#     - ./vars/vars.yaml
 
-  tasks:
+#   tasks:
 
     - name: Create metallb namespace
       kubernetes.core.k8s:
@@ -177,6 +177,7 @@
     #     cmd: |
     #       kubectl apply -f https://openebs.github.io/charts/openebs-operator-lite.yaml
     #       kubectl apply -f https://openebs.github.io/charts/openebs-lite-sc.yaml
+    
     - name: Openeb storageclass
       kubernetes.core.k8s:
         state: present

@@ -35,6 +35,9 @@
         - lsb-release
         - apt-transport-https
         - software-properties-common
+        - acl
+        - python3
+        - python3-pip
 
     # - name: Crio install
     #   shell: 
@@ -162,20 +165,10 @@
           yes | cp -i /etc/kubernetes/admin.conf /home/{{ k8s_user }}/.kube/config
           chown {{ k8s_user }}:{{ k8s_user }} /home/{{ k8s_user }}/.kube/config
 
-    - name: Install acl
-      apt: 
-        name:
-          - acl
-
     - name: Set acl rx to k8s user in tmp folder
       shell: 
         cmd: |
-          setfacl -m u:k8s:rx /tmp/
-
-    - name: Install pip3
-      apt: 
-        name:
-          - python3-pip
+          setfacl -m u:{{ k8s_user }}:rx /tmp/
 
     - name: Install kubernetes pip3
       shell: 
