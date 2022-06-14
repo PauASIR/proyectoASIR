@@ -1,5 +1,5 @@
 [server]
-79.116.38.235
+79.116.18.143
 
 [server:vars]
 ansible_user=pau

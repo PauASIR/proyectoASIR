@@ -10,8 +10,8 @@
     - name: Taint master or control-plane node
       shell: 
         cmd: |
-          kubectl taint nodes --all node-role.kubernetes.io/master- &> /dev/null
-          kubectl taint nodes --all node-role.kubernetes.io/control-plane- &> /dev/null
+          kubectl taint nodes --all node-role.kubernetes.io/master- > /dev/null
+          kubectl taint nodes --all node-role.kubernetes.io/control-plane- > /dev/null
           
     - name: Download calico operator yaml
       ansible.builtin.get_url:

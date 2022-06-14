@@ -74,22 +74,34 @@
     #     src: /tmp/containerd.tar.gz
     #     dest: /usr/local
 
-    # - name: GPG key / APT repository from docker
-    #   shell: 
-    #     cmd: |
-    #       curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-    #       echo \
-    #       "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-    #       $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-    #       apt update
+    - name: Create the directory keyrings if it does not exist
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+        
+    - name: Check if docker gpg has already exist
+      stat:
+        path: "/etc/apt/keyrings/docker.gpg"
+      register: docker_gpg
 
-    # - name: Install docker
-    #   apt: 
-    #     name:
-    #       - docker-ce
-    #       - docker-ce-cli
-    #       - containerd.io
-    #       - docker-compose-plugin
+    - name: GPG key / APT repository from docker
+      shell: 
+        cmd: |
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+          echo \
+          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+          $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+          apt update
+      when: not docker_gpg.stat.exists
+
+    - name: Install docker
+      apt: 
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
 
     # - name: cri-docker
     #   shell: 
@@ -102,21 +114,21 @@
     #       systemctl enable cri-docker.service
     #       systemctl enable --now cri-docker.socket
 
-    # - name: Cgroup driver
-    #   shell: 
-    #     cmd: |
-    #       cat <<EOF | sudo tee /etc/docker/daemon.json
-    #       {
-    #         "exec-opts": ["native.cgroupdriver=systemd"],
-    #         "log-driver": "json-file",
-    #         "log-opts": {
-    #           "max-size": "100m"
-    #         },
-    #         "storage-driver": "overlay2"
-    #       }
-    #       EOF
-    #       systemctl daemon-reload
-    #       systemctl restart docker
+    - name: Cgroup driver
+      shell: 
+        cmd: |
+          cat <<EOF | sudo tee /etc/docker/daemon.json
+          {
+            "exec-opts": ["native.cgroupdriver=systemd"],
+            "log-driver": "json-file",
+            "log-opts": {
+              "max-size": "100m"
+            },
+            "storage-driver": "overlay2"
+          }
+          EOF
+          systemctl daemon-reload
+          systemctl restart docker
 
     - name: Install cri-o
       ansible.builtin.script: 
@@ -132,9 +144,9 @@
     - name: Install kubernetes
       apt: 
         name:
-        - kubelet
-        - kubeadm
-        - kubectl
+        - kubelet=1.23.7-00
+        - kubeadm=1.23.7-00
+        - kubectl=1.23.7-00
 
     - name: Mark hold k8s
       shell: 

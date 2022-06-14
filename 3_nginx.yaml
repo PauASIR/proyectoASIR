@@ -24,7 +24,7 @@
       kubernetes.core.k8s:
         state: present
         template:
-          - path: './templates/yaml/nginx/nginx-deploy.yaml'
+          - path: './templates/yaml/nginx/nginx-deploy-local.yaml'
 
     - name: Create nginx service
       kubernetes.core.k8s:

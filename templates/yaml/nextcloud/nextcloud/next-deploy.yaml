@@ -23,7 +23,7 @@ spec:
         persistentVolumeClaim: 
           claimName: syncthing-pvc
       containers:
-        - image: nextcloud:apache
+        - image: nextcloud:24-apache
           name: nextsync
           ports:
             - containerPort: 80
@@ -31,7 +31,7 @@ spec:
             - name: REDIS_HOST
               value: redis
             - name: MYSQL_HOST
-              value: mariadb 
+              value: mariadb
             - name: MYSQL_DATABASE
               valueFrom:
                 secretKeyRef:
